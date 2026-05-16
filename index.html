@@ -6,6 +6,9 @@
     <title>我所知道的康橋（作者：徐志摩） 重組練習</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- 引入 SortableJS 實現拖曳排序功能 -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
     <link href="https://cdn.jsdelivr.net/npm/gensen-rounded-web@1.0.1/css/gensen-rounded-tw.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,14 +22,12 @@
             --success-color: #10b981; /* Emerald 500 */
             --error-color: #ef4444; /* Red 500 */
             
-            /* 👇 關鍵修改在這裡：字體順序設定 👇 */
             /* 瀏覽器會從左讀到右：源泉圓體優先 -> Chiron GoRound TC 備用 -> 最後用微軟正黑體或系統預設 */
             --main-font: 'GenSenRounded TW', 'Chiron GoRound TC', 'Microsoft JhengHei', sans-serif;
         }
 
         body {
             font-family: var(--main-font);
-            /* 👇 加上 Google Fonts 視覺微調屬性 👇 */
             font-optical-sizing: auto;
             
             background-color: #f0fdf4;
@@ -67,6 +68,7 @@
             box-shadow: 0 4px 0 #e5e7eb;
             font-size: 1.35rem;
             margin: 6px;
+            /* 阻擋雙擊放大，讓點擊判斷更靈敏 (連點防護) */
             touch-action: manipulation;
         }
         .word-item:active {
@@ -100,7 +102,7 @@
             font-family: var(--main-font);
         }
         .drop-zone:empty::before {
-            content: '請點選下方詞語卡片，排列成通順的文句';
+            content: '請點選上方詞語卡片，排列成通順的文句';
             color: #94a3b8;
             font-size: 1.1rem;
             width: 100%;
@@ -135,6 +137,18 @@
         }
         .btn-action:active {
             transform: scale(0.95);
+        }
+
+        /* SortableJS 拖曳狀態的視覺回饋 */
+        .sortable-ghost {
+            opacity: 0.4;
+            background-color: #e5e7eb;
+            border-style: dashed;
+        }
+        .sortable-drag {
+            cursor: grabbing !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+            transform: scale(1.05);
         }
 
         /* Feedback Animation Styles */
@@ -233,7 +247,7 @@
                 <span class="text-xl sm:text-2xl text-gray-600 font-bold mx-1 align-baseline">（作者：徐志摩）</span>
                 重組練習
             </h1>
-            <p class="text-lg text-gray-600 font-bold tracking-wide mt-4">請將下方文句重新排列成正確的課文順序</p>
+            <p class="text-lg text-gray-600 font-bold tracking-wide mt-4">請將下方詞語重新排列成正確的文句順序</p>
             
             <!-- Progress -->
             <div class="mt-6 max-w-xs mx-auto">
@@ -250,9 +264,9 @@
         <!-- Footer / Citation -->
         <footer class="mt-16 mb-8 text-center">
             <div class="max-w-xl mx-auto px-4 space-y-1">
-                <p class="text-gray-600 font-medium text-sm">原版工具：米克師；延伸開發：金魚老師</p>
+                <p class="text-gray-600 font-medium text-sm">原版工具：特教米克師；延伸開發：金魚老師</p>
                 <p class="text-gray-600 font-medium text-sm">
-                    工具連結：<a href="https://spedmix.pages.dev/unscramble" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-600 hover:underline transition-colors">https://reurl.cc/KO98Q9</a>
+                    工具連結：<a href="https://reurl.cc/KO98Q9" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-600 hover:underline transition-colors">https://reurl.cc/KO98Q9</a>
                 </p>
                 
                 <p class="text-xs text-gray-400 pt-2">本作品基於原版工具改編，採用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh_TW" target="_blank" rel="noopener noreferrer" class="hover:text-gray-500 underline decoration-dotted">CC BY-NC-SA 4.0</a> 授權。</p>
@@ -262,25 +276,28 @@
     </div>
 
     <script>
+        // 用於判斷目前是否正在拖曳，防止放開滑鼠/手指時誤觸點擊事件
+        window.isDraggingItem = false;
+
         // --- DATA ---
         const exercises = [
             {
                 id: 'q1',
-                label: '第三段①',
+                label: '第三段 ①',
                 answer: '朝陽是難得見的，這初春的天氣，但它來時是起早人莫大的愉快。頃刻間這田野添深了顏色，一層輕紗似的金粉糝上了這草、這樹、這通道、這莊舍。',
                 ttsText: '朝陽是難得見的，這初春的天氣，但它來時是起早人莫大的愉快。頃刻間這田野添深了顏色，一層輕紗似的金粉糝上了這草、這樹、這通道、這莊舍。',
                 chunks: ['朝陽是難得見的，', '這初春的天氣，', '但它來時是起早人莫大的愉快。', '頃刻間這田野添深了顏色，', '一層輕紗似的金粉糝上了', '這草、', '這樹、', '這通道、', '這莊舍。']
             },
             {
                 id: 'q2',
-                label: '第三段②',
+                label: '第三段 ②',
                 answer: '頃刻間這周遭瀰漫了清晨富麗的溫柔。頃刻間你的心懷也分潤了白天誕生的光榮。',
                 ttsText: '頃刻間這周遭瀰漫了清晨富麗的溫柔。頃刻間你的心懷也分潤了白天誕生的光榮。',
                 chunks: ['頃刻間', '這周遭瀰漫了', '清晨富麗的溫柔。', '頃刻間', '你的心懷', '也分潤了白天誕生的光榮。']
             },
             {
                 id: 'q3',
-                label: '第三段③',
+                label: '第三段 ③',
                 answer: '「春！」這勝利的晴空彷彿在你的耳邊私語。「春！」你那快活的靈魂也彷彿在那裡回響。',
                 ttsText: '「春！」這勝利的晴空彷彿在你的耳邊私語。「春！」你那快活的靈魂也彷彿在那裡回響。',
                 chunks: ['「春！」', '這勝利的晴空', '彷彿在你的耳邊私語。', '「春！」', '你那快活的靈魂', '也彷彿在那裡回響。']
@@ -289,12 +306,17 @@
 
         let completedCount = 0;
         const totalCount = exercises.length;
+        
+        // 先宣告 synth 變數 (通常寫在全域)
         const synth = window.speechSynthesis;
 
         // --- FUNCTIONS ---
 
+        // 發音函式
         function speak(text, lang = 'zh-TW', rate = 0.90) {
-            if (!text) return;
+            // 🛡️ 語音引擎相容性與空字串防護
+            if (!text || !synth) return; 
+
             synth.cancel();
 
             // 針對破音字與特定讀音進行語音字串替換，確保系統唸出正確發音
@@ -302,7 +324,7 @@
                 .replace(/朝陽/g, '昭陽')    // 朝(ㄓㄠ)陽
                 .replace(/似的/g, '四的')    // 似(ㄙˋ)的
                 .replace(/糝/g, '傘')      // 糝(ㄙㄢˇ)
-                .replace(/莊舍/g, '莊社');   // 舍(ㄕㄜˋ)，改用「社」確保四聲發音正確
+                .replace(/莊舍/g, '莊社');   // 舍(ㄕㄜˋ)
 
             const utterThis = new SpeechSynthesisUtterance(speechText);
             utterThis.lang = lang;
@@ -322,7 +344,7 @@
                 const shuffledWords = [...ex.chunks].sort(() => Math.random() - 0.5);
 
                 card.innerHTML = `
-                    <div class="mb-4 flex items-center gap-3">
+                    <div class="mb-4 flex items-center gap-4">
                         <span class="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 font-bold text-lg border-2 border-emerald-200">${ex.id.replace('q', '')}</span>
                         <h2 class="text-xl font-bold text-gray-700 tracking-wide">${ex.label}</h2>
                     </div>
@@ -349,6 +371,44 @@
 
                 container.appendChild(card);
             });
+
+            // 畫面渲染完成後，為每一個「作答區」初始化拖曳排序功能 (SortableJS)
+            exercises.forEach((ex) => {
+                const zone = document.getElementById(`zone-${ex.id}`);
+                
+                new Sortable(zone, {
+                    animation: 150,           // 拖曳時的動畫效果速度
+                    ghostClass: 'sortable-ghost', // 拖曳時下方佔位符的 CSS class
+                    dragClass: 'sortable-drag',   // 正在被拖曳元素的 CSS class
+                    delay: 150,               // 觸控裝置需長按 150 毫秒才能拖曳 (防止誤觸與干擾滑動)
+                    delayOnTouchOnly: true,   // 滑鼠可直接拖曳，僅觸控裝置需要延遲
+
+                    // 開始拖曳時的事件
+                    onStart: function (evt) {
+                        // 標記全域變數為拖曳中，這樣就能有效防止放開滑鼠/手指時誤觸發 click 事件
+                        window.isDraggingItem = true;
+                    },
+                    
+                    // 結束拖曳時的事件
+                    onEnd: function (evt) {
+                        // 清除視覺狀態、扣除進度等
+                        const card = document.getElementById(`card-${ex.id}`);
+                        const feedbackEl = card.querySelector('.feedback');
+                        feedbackEl.textContent = '';
+                        zone.classList.remove('correct', 'incorrect');
+                        
+                        if (zone.dataset.completed) {
+                            delete zone.dataset.completed;
+                            updateProgress(-1);
+                        }
+
+                        // 🛡️ 拖曳狀態卡死防護：稍微延遲解除拖曳狀態 (100毫秒)。
+                        setTimeout(() => { 
+                            window.isDraggingItem = false; 
+                        }, 100);
+                    }
+                });
+            });
         }
 
         // --- EVENT DELEGATION ---
@@ -357,6 +417,9 @@
 
             // 1. Word Item Click (Chinese blocks)
             if (target.classList.contains('word-item')) {
+                // 🛡️ 拖曳防誤觸判斷：如果系統判定目前正在拖曳中，則取消點擊動作
+                if (window.isDraggingItem) return;
+
                 const card = target.closest('.exercise-card');
                 if (!card) return;
                 const exId = card.dataset.id;
